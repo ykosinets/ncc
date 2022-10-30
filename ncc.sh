@@ -1,5 +1,91 @@
 #!/bin/sh
 
+############################################################
+# Help                                                     #
+############################################################
+Help() {
+  # Display Help
+  echo "Description of the script functions."
+  echo
+  echo "Syntax:"
+  echo "ncc COMPONENT_NAME [setup] -[p | i] -[ a | m | o | c] -[h | v] -[b]"
+  echo
+  echo "setup                                     // Install the component"
+  echo "-[h | v]                                  // System: Help or Version"
+  echo "-[p | i]                                  // Type: Presentation or Integration"
+  echo "-[b]                                      // Browse Google Chrome after creation"
+  echo "-[ a | m | o | c]                         // Size: Atom, Molecule, Organism or Component(deprecated)"
+  echo "--[css | js]                              // Extra files: Include extra css or js files"
+  exit 1
+}
+############################################################
+# Print GPL license notification                           #
+############################################################
+License() {
+  echo "This program is free software: you can redistribute it and/or modify"
+  echo "it under the terms of the GNU General Public License as published by"
+  echo "the Free Software Foundation, either version 3 of the License, or"
+  echo "(at your option) any later version."
+  echo
+  echo "This program is distributed in the hope that it will be useful,"
+  echo "but WITHOUT ANY WARRANTY; without even the implied warranty of"
+  echo "MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the"
+  echo "GNU General Public License for more details."
+  echo
+  echo "You should have received a copy of the GNU General Public License"
+  echo "along with this program.  If not, see <http://www.gnu.org/licenses/>."
+  exit 1
+}
+############################################################
+# Print software version                                   #
+############################################################
+Version() {
+  echo "Version 1.1"
+  exit 1
+}
+############################################################
+# Install script                                           #
+############################################################
+Setup() {
+  echo "Installing NCC..."
+  cp ncc.sh /usr/local/bin
+  echo "Installing NCC... Done"
+  exit 1
+}
+
+# CHECK IS COMMAND PROVIDED
+if [ -z "$1" ]; then
+  echo "No command provided"
+  Help
+  else
+    component_name=$1
+fi
+
+# READ SYSTEM FLAGS
+while [ -n "$1" ]; do # while loop starts
+  case "$1" in
+  -[Hh] | --[Hh][Ee][Ll][Pp])
+    Help
+    break
+    ;;
+  -[Ll])
+    License
+    break
+    ;;
+  -[Vv])
+    Version
+    break
+    ;;
+  [Ss][Ee][Tt][Uu][Pp])
+    Setup
+    break
+    ;;
+  *)
+    break
+    ;;
+  esac
+done
+
 # READ PROJECT NAME FROM .ddev/config.yaml
 project_name=$(head -n 1 "${PWD}/.ddev/config.yaml")
 project_name=$(echo "$project_name" | sed 's/.*\ \(.*\)/\1/')
@@ -10,25 +96,29 @@ echo "$project_name"
 if [ -d "${PWD}/.idea" ] && [ -d "${PWD}/DistributionPackages" ]; then
   echo
 else
-  echo "ERROR: Seems like you are not in the project root directory. Run this scrip from root directory."
+  echo "ERROR: Seems like you are not in the project root directory. Run this scrip only from root directory."
   exit 1
 fi
 
 # READ COMPONENT NAME
 echo "Creating new Neos component for \"$project_name\"."
-echo "Name your component:"
-read component_name
+if [ -z "$component_name" ]; then
+  echo "ERROR: \"$component_name\" is not valid component name. Please provide new component name."
+  read -p "Component name: " component_name
+fi
+
 component_name_without_specials=$(echo "$component_name" | tr -dc '[:alnum:]\n\r')
 
 if [ "$component_name" != "$component_name_without_specials" ]; then
   echo "Component name contains special characters. Would you like to change it to: ${component_name_without_specials} [y]. Or provide new name."
-  read is_component_name_changed_right
 
-  if [ "$is_component_name_changed_right" = 'y' ] || [ "$is_component_name_changed_right" = 'Y' ]; then
+  read component_name_changed_right
+
+  if [ "$component_name_changed_right" = 'y' ] || [ "$component_name_changed_right" = 'Y' ]; then
     component_name="$component_name_without_specials"
     echo "Component name was changed to: \"$component_name\""
   else
-    component_name="$is_component_name_changed_right"
+    component_name="$component_name_changed_right"
 
     # READ COMPONENT NAME WHILE IT DOES NOT CONTAIN SPECIAL CHARACTERS
     while [ "$component_name" != "$(echo "$component_name" | tr -dc '[:alnum:]\n\r')" ]; do
@@ -48,8 +138,11 @@ component_size="Component"
 is_css_required="false"
 is_js_required="false"
 is_component_exists="false"
+is_component_fusion_exists="false"
+is_component_css_exists="false"
+is_component_js_exists="false"
 
-# READ FLAGS
+# READ VAR FLAGS
 while [ -n "$1" ]; do # while loop starts
   case "$1" in
   -[Ii] | --[Ii][Nn][Tt][Ee][Gg][Rr][Aa][Tt][Ii][Oo][Nn])
@@ -88,24 +181,11 @@ while [ -n "$1" ]; do # while loop starts
     browse="true"
     shift
     ;;
-  -[Hh] | --[Hh][Ee][Ll][Pp])
-    help="true"
-    shift
-    ;;
-  -[Ll])
-    license="true"
-    shift
-    ;;
-  -[Vv])
-    version="true"
-    shift
-    ;;
   --)
     break
     ;;
   *)
-    printf "Unknown option %s\n" "$1"
-    exit 1
+    shift
     ;;
   esac
 done
@@ -117,9 +197,10 @@ component_path="${PWD}/${component_local_path}/${component_type}/${component_siz
 
 # IS COMPONENT EXISTS
 if [ -d "${component_path}/${component_name}" ]; then
-  echo "ERROR: Component ${component_name} is already exist in"
-  echo "${component_local_path}"
-  exit 1
+  echo
+  echo "NOTICE: Component ${component_name} is already exist in"
+  echo "${component_local_path}/${component_type}/${component_size}"
+  is_component_exists="true"
 else
 
   # IS COMPONENT TYPE DIRECTORY EXISTS
@@ -143,48 +224,6 @@ else
   echo "${component_type}/${component_size}/${component_name}"
   mkdir "${component_path}/${component_name}"
 fi
-############################################################
-# Help                                                     #
-############################################################
-Help() {
-  # Display Help
-  echo "Description of the script functions."
-  echo
-  echo "Syntax:"
-  echo "ncc -[p | i] -[ a | m | o | c] -[h | v] -[b]"
-  echo
-  echo "-[h | v]                                  // System: Help or Version"
-  echo "-[p | i]                                  // Type: Presentation or Integration"
-  echo "-[b]                                      // Browse Google Chrome after creation"
-  echo "-[ a | m | o | c]                         // Size: Atom, Molecule, Organism or Component(deprecated)"
-  echo "--[css | js]                              // Extra files: Include extra css or js files"
-  exit 1
-}
-############################################################
-# Print software version                                   #
-############################################################
-Version() {
-  echo "Version 1.0"
-  exit 1
-}
-############################################################
-# Print GPL license notification                           #
-############################################################
-License() {
-  echo "This program is free software: you can redistribute it and/or modify"
-  echo "it under the terms of the GNU General Public License as published by"
-  echo "the Free Software Foundation, either version 3 of the License, or"
-  echo "(at your option) any later version."
-  echo
-  echo "This program is distributed in the hope that it will be useful,"
-  echo "but WITHOUT ANY WARRANTY; without even the implied warranty of"
-  echo "MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the"
-  echo "GNU General Public License for more details."
-  echo
-  echo "You should have received a copy of the GNU General Public License"
-  echo "along with this program.  If not, see <http://www.gnu.org/licenses/>."
-  exit 1
-}
 ############################################################
 # CREATE CSS FILE                                          #
 ############################################################
@@ -279,17 +318,42 @@ if [ "$version" = "true" ]; then
   exit 1
 fi
 
-echo
+# CHECK IF FUSION FILE EXISTS
+if [ -f "${component_path}/${component_name}/${component_name}.fusion" ]; then
+  echo
+  echo "NOTICE: Fusion file \"${component_name}\" is already exist in"
+  echo "${component_local_path}"
+  is_component_fusion_exists="true"
+fi
+
+# CHECK IS JS FILE EXISTS
+if [ -f "${component_path}/${component_name}/${component_name}.js" ] && [ $is_js_required = "true" ]; then
+  echo
+  echo "NOTICE: Js file \"${component_name}\" is already exist in"
+  echo "${component_local_path}"
+  is_component_js_exists="true"
+fi
+
+# CHECK IS CSS FILE EXISTS
+if [ -f "${component_path}/${component_name}/${component_name}.css" ] && [ $is_css_required = "true" ]; then
+  echo
+  echo "NOTICE: Css file \"${component_name}.css\" is already exist in"
+  echo "${component_local_path}"
+  is_component_css_exists="true"
+fi
+
 # FUSION
-MakeFusion "$component_type"
+if [ ! "$is_component_fusion_exists" = "true" ]; then
+  MakeFusion "$component_type"
+fi
 
 # CSS
-if [ "$is_css_required" = "true" ]; then
+if [ "$is_css_required" = "true" ] && [ ! "$is_component_css_exists" = "true" ]; then
   MakeCSS
 fi
 
 # JS
-if [ "$is_js_required" = "true" ]; then
+if [ "$is_js_required" = "true" ] && [ ! "$is_component_js_exists" = "true" ]; then
   MakeJS
 fi
 
@@ -306,10 +370,13 @@ Debug() {
   echo "DEBUG is_css_required: $is_css_required"
   echo "DEBUG is_js_required: $is_js_required"
 }
+
 # DEBUG
 if [ $debug_mode = 1 ]; then
   Debug
+  exit 1
 fi
+
 ## open component fusion file via phpstorm
 url="https://${project_name_lowercase}.ddev.site/monocle/preview/index?prototypeName=CodeQ.Site%3A${component_type}.${component_size}.${component_name}&sitePackageKey=CodeQ.Site"
 
@@ -319,4 +386,8 @@ if [ $browse = "true" ]; then
 fi
 
 # Open phpstorm
-/usr/local/bin/phpstorm.sh --line 14 "${component_path}/${component_name}/${component_name}.fusion"
+if [ $is_component_fusion_exists = "true" ]; then
+  /usr/local/bin/phpstorm.sh "${component_path}/${component_name}/${component_name}.fusion"
+else
+  /usr/local/bin/phpstorm.sh --line 13 "${component_path}/${component_name}/${component_name}.fusion"
+fi
