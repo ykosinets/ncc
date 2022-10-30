@@ -6,11 +6,12 @@
 Help() {
   # Display Help
   echo "Description of the script functions."
+  echo "Install script globally:"
+  echo "./ncc.sh setup"
   echo
-  echo "Syntax:"
+  echo "Component create syntax:"
   echo "ncc COMPONENT_NAME [setup] -[p | i] -[ a | m | o | c] -[h | v] -[b]"
   echo
-  echo "setup                                     // Install the component"
   echo "-[h | v]                                  // System: Help or Version"
   echo "-[p | i]                                  // Type: Presentation or Integration"
   echo "-[b]                                      // Browse Google Chrome after creation"
@@ -55,10 +56,10 @@ Setup() {
 
 # CHECK IS COMMAND PROVIDED
 if [ -z "$1" ]; then
-  echo "No command provided"
-  Help
-  else
-    component_name=$1
+  echo "No command provided."
+  echo "Type ncc -h for help"
+else
+  component_name=$1
 fi
 
 # READ SYSTEM FLAGS
@@ -92,7 +93,7 @@ project_name=$(echo "$project_name" | sed 's/.*\ \(.*\)/\1/')
 project_name_lowercase=$(echo "$project_name" | sed 's/.*\ \(.*\)/\1/' | tr '[:upper:]' '[:lower:]')
 echo "$project_name"
 
-# IS SCRIPT RUNNING IN THE PROJECT ROOT DIRECTORY
+# CHECK IS SCRIPT RUNNING IN THE PROJECT ROOT DIRECTORY
 if [ -d "${PWD}/.idea" ] && [ -d "${PWD}/DistributionPackages" ]; then
   echo
 else
@@ -110,7 +111,7 @@ fi
 component_name_without_specials=$(echo "$component_name" | tr -dc '[:alnum:]\n\r')
 
 if [ "$component_name" != "$component_name_without_specials" ]; then
-  echo "Component name contains special characters. Would you like to change it to: ${component_name_without_specials} [y]. Or provide new name."
+  echo "Component name contains special characters. Would you like to change it to: \"${component_name_without_specials}\" Yes[y]. Or provide new name."
 
   read component_name_changed_right
 
@@ -125,13 +126,13 @@ if [ "$component_name" != "$component_name_without_specials" ]; then
       echo "Wrong name, don't use special characters:"
       read component_name
     done
+
     echo "Component name was set to: \"$component_name\""
   fi
 fi
 
 # SET DEFAULTS
-help="false"
-project_dir_name="${PWD##/*/}"
+#project_dir_name="${PWD##/*/}"
 browse="false"
 component_type="Presentation"
 component_size="Component"
@@ -203,7 +204,7 @@ if [ -d "${component_path}/${component_name}" ]; then
   is_component_exists="true"
 else
 
-  # IS COMPONENT TYPE DIRECTORY EXISTS
+  # IS COMPONENT TYPE DIRECTORY EXISTS (CREATE IF NOT)
   if [ ! -d "${PWD}/${component_local_path}/${component_type}" ]; then
     echo
     echo "First time usage of \"${component_type}\" component type."
@@ -211,7 +212,7 @@ else
     mkdir "${PWD}/${component_local_path}/${component_type}"
   fi
 
-  # IS COMPONENT SIZE DIRECTORY EXISTS
+  # IS COMPONENT SIZE DIRECTORY EXISTS (CREATE IF NOT)
   if [ ! -d "${PWD}/${component_local_path}/${component_type}/${component_size}" ]; then
     echo
     echo "First time usage of \"${component_size}\" size."
@@ -299,24 +300,6 @@ MakeFusion() {
 ############################################################
 # Main program                                             #
 ############################################################
-
-# HELP INFORMATION
-if [ "$help" = "true" ]; then
-  Help
-  exit 1
-fi
-
-# VERSION
-if [ "$license" = "true" ]; then
-  License
-  exit 1
-fi
-
-# VERSION
-if [ "$version" = "true" ]; then
-  Version
-  exit 1
-fi
 
 # CHECK IF FUSION FILE EXISTS
 if [ -f "${component_path}/${component_name}/${component_name}.fusion" ]; then
